@@ -29,10 +29,11 @@
           v-for="(log, idx) in filteredLogs"
           :key="idx"
           class="log-entry"
-          :class=" 'log-' + log.level"
+          :class="'log-' + log.level"
         >
           <span class="log-time">{{ log.time || formatTs(log.ts) }}</span>
-          <span class="log-tag">[{{ log.tag }}]</span>
+          <span class="log-level-badge" :class="'badge-' + log.level">{{ getLevelLabel(log.level) }}</span>
+          <span class="log-tag">{{ log.icon || '' }} {{ log.tag }}</span>
           <span class="log-msg">{{ log.msg }}</span>
         </div>
         <div v-if="filteredLogs.length === 0" class="log-empty">
@@ -135,6 +136,12 @@ function formatTs(ts) {
   return new Date(ts).toLocaleTimeString()
 }
 
+function getLevelLabel(level) {
+  if (level === 'error') return 'ERR'
+  if (level === 'warn') return 'WRN'
+  return 'INF'
+}
+
 onUnmounted(() => {
   offEvent('bot:log', onBotLog)
   offEvent('logs:history', onLogsHistory)
@@ -175,29 +182,79 @@ onUnmounted(() => {
 .log-entry {
   white-space: pre-wrap;
   word-break: break-all;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.3);
+}
+
+.log-entry:last-child {
+  border-bottom: none;
 }
 
 .log-time {
-  color: #6a9955;
-  margin-right: 6px;
+  color: #6e7681;
+  margin-right: 2px;
+  font-size: 11px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.log-level-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 3px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  min-width: 26px;
+  text-align: center;
+  line-height: 16px;
+}
+
+.badge-info {
+  background: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+}
+
+.badge-warn {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+}
+
+.badge-error {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
 }
 
 .log-tag {
-  color: #569cd6;
-  margin-right: 6px;
+  color: #79c0ff;
+  margin-right: 2px;
   font-weight: 600;
+  min-width: 50px;
+  flex-shrink: 0;
 }
 
 .log-msg {
   color: #d4d4d4;
+  flex: 1;
 }
 
 .log-warn .log-tag {
-  color: #ce9178;
+  color: #d29922;
 }
 
 .log-warn .log-msg {
-  color: #ce9178;
+  color: #d29922;
+}
+
+.log-error .log-tag {
+  color: #f85149;
+}
+
+.log-error .log-msg {
+  color: #f85149;
 }
 
 .log-empty {

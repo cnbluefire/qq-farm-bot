@@ -215,6 +215,7 @@ class BotManager extends EventEmitter {
             platform: opts.platform || 'qq',
             farmInterval: opts.farmInterval || CONFIG.farmCheckInterval,
             friendInterval: opts.friendInterval || CONFIG.friendCheckInterval,
+            preferredSeedId: opts.preferredSeedId || 0,
         });
 
         // 监听事件并转发给 BotManager 的事件总线
@@ -273,6 +274,7 @@ class BotManager extends EventEmitter {
             platform: user?.platform || 'qq',
             farmInterval: user?.farm_interval || 10000,
             friendInterval: user?.friend_interval || 10000,
+            preferredSeedId: user?.preferred_seed_id || 0,
         });
     }
 
@@ -300,12 +302,13 @@ class BotManager extends EventEmitter {
     /**
      * 修改账号配置
      */
-    updateAccountConfig(uin, { farmInterval, friendInterval, autoStart, platform }) {
+    updateAccountConfig(uin, { farmInterval, friendInterval, autoStart, platform, preferredSeedId }) {
         const updates = {};
         if (farmInterval !== undefined) updates.farm_interval = farmInterval;
         if (friendInterval !== undefined) updates.friend_interval = friendInterval;
         if (autoStart !== undefined) updates.auto_start = autoStart ? 1 : 0;
         if (platform !== undefined) updates.platform = platform;
+        if (preferredSeedId !== undefined) updates.preferred_seed_id = preferredSeedId;
         db.updateUser(uin, updates);
 
         // 如果 Bot 正在运行，更新运行时配置
@@ -313,6 +316,7 @@ class BotManager extends EventEmitter {
         if (bot) {
             if (farmInterval !== undefined) bot.farmInterval = farmInterval;
             if (friendInterval !== undefined) bot.friendInterval = friendInterval;
+            if (preferredSeedId !== undefined) bot.setPreferredSeedId(preferredSeedId);
         }
     }
 
@@ -332,6 +336,7 @@ class BotManager extends EventEmitter {
                         platform: user.platform,
                         farmInterval: user.farm_interval,
                         friendInterval: user.friend_interval,
+                        preferredSeedId: user.preferred_seed_id || 0,
                     });
                     console.log(`[BotManager] 已启动: ${user.uin} (${user.nickname || '未知'})`);
                 }

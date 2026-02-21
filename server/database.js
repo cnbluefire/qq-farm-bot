@@ -144,6 +144,9 @@ async function initDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_logs_uin ON bot_logs(user_uin)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_logs_created ON bot_logs(created_at)`);
 
+    // 迁移: 添加 preferred_seed_id 列
+    try { db.run(`ALTER TABLE users ADD COLUMN preferred_seed_id INTEGER DEFAULT 0`); } catch (e) { /* 列已存在 */ }
+
     saveToFile();
 
     // 自动保存定时器

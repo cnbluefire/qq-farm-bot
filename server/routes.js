@@ -138,6 +138,7 @@ router.get('/accounts/:uin/snapshot', canAccessUin, (req, res) => {
                     userId: user.uin, status: 'stopped',
                     userState: { name: user.nickname, level: user.level, gold: user.gold, exp: user.exp, gid: user.gid },
                     featureToggles: null, dailyStats: null,
+                    preferredSeedId: user.preferred_seed_id || 0,
                 }
             });
         }

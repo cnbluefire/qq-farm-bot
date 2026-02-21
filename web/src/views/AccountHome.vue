@@ -82,6 +82,10 @@
             <span class="toggle-label">放虫放草 <el-tooltip content="给好友放置害虫和杂草" placement="top"><el-icon :size="14"><QuestionFilled /></el-icon></el-tooltip></span>
             <el-switch v-model="toggles.friendPest" @change="saveToggles" />
           </div>
+          <div class="toggle-row">
+            <span class="toggle-label">经验满也帮忙 <el-tooltip content="开启后，帮好友浇水/除草/除虫时即使当日经验次数已达上限也继续操作；关闭则经验满后跳过" placement="top"><el-icon :size="14"><QuestionFilled /></el-icon></el-tooltip></span>
+            <el-switch v-model="toggles.helpEvenExpFull" @change="saveToggles" />
+          </div>
         </div>
 
         <div class="toggle-group">

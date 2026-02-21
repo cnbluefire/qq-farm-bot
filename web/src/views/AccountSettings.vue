@@ -12,6 +12,29 @@
           <el-input-number v-model="friendIntervalSec" :min="1" :max="3600" :step="1" />
           <span class="unit">秒 (最低1秒)</span>
         </el-form-item>
+        <el-form-item label="指定种植作物">
+          <el-select
+            v-model="preferredSeedId"
+            placeholder="自动选择(经验效率最高)"
+            clearable
+            filterable
+            style="width: 260px"
+            :loading="rankingLoading"
+          >
+            <el-option :value="0" label="自动选择(经验效率最高)" />
+            <el-option
+              v-for="item in ranking"
+              :key="item.seedId"
+              :value="item.seedId"
+              :label="`${item.name} (${item.expPerHour}经验/时)`"
+            >
+              <span>{{ item.name }}</span>
+              <span v-if="item.seasons > 1" style="color: var(--color-warning); font-size: 11px"> ×{{ item.seasons }}季</span>
+              <span style="float: right; color: var(--text-muted); font-size: 12px">{{ item.expPerHour }} 经验/时</span>
+            </el-option>
+          </el-select>
+          <span class="unit">清空则自动选择</span>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="saveConfig" :loading="saving">保存配置</el-button>
         </el-form-item>
@@ -73,6 +96,7 @@ const props = defineProps({ uin: String })
 
 const farmIntervalSec = ref(1)
 const friendIntervalSec = ref(10)
+const preferredSeedId = ref(0)
 const saving = ref(false)
 const userLevel = ref(1)
 
@@ -86,6 +110,7 @@ async function fetchConfig() {
     farmIntervalSec.value = Math.round((data.farmInterval || 1000) / 1000)
     friendIntervalSec.value = Math.round((data.friendInterval || 10000) / 1000)
     userLevel.value = data.userState?.level || 1
+    preferredSeedId.value = data.preferredSeedId || 0
   } catch { /* */ }
 }
 
@@ -95,6 +120,7 @@ async function saveConfig() {
     await updateAccountConfig(props.uin, {
       farmInterval: farmIntervalSec.value * 1000,
       friendInterval: friendIntervalSec.value * 1000,
+      preferredSeedId: preferredSeedId.value || 0,
     })
     ElMessage.success('配置已保存')
   } catch (e) {

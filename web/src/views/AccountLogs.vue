@@ -4,21 +4,31 @@
       <div class="logs-header">
         <h3 class="section-title">运行日志</h3>
         <div class="logs-actions">
+          <el-select v-model="tagFilter" placeholder="全部分类" clearable size="small" style="width: 130px">
+            <el-option v-for="t in availableTags" :key="t" :label="t" :value="t" />
+          </el-select>
+          <el-select v-model="levelFilter" placeholder="全部级别" clearable size="small" style="width: 110px">
+            <el-option label="ℹ️ 信息" value="info" />
+            <el-option label="⚠️ 警告" value="warn" />
+            <el-option label="❌ 错误" value="error" />
+          </el-select>
           <el-switch v-model="autoScroll" active-text="自动滚动" inactive-text="" size="small" />
           <el-button size="small" @click="clearLogs">清空</el-button>
+          <el-tag size="small" type="info">{{ filteredLogs.length }} 条</el-tag>
         </div>
       </div>
 
       <div class="log-container" ref="logContainer">
-        <div v-if="logs.length === 0" class="empty-hint">暂无日志</div>
+        <div v-if="filteredLogs.length === 0" class="empty-hint">暂无日志</div>
         <div
-          v-for="(entry, idx) in logs"
+          v-for="(entry, idx) in filteredLogs"
           :key="idx"
           class="log-line"
           :class="getLogClass(entry)"
         >
           <span class="log-time">{{ entry.time || '' }}</span>
-          <span class="log-tag" v-if="entry.tag">[{{ entry.tag }}]</span>
+          <span class="log-level-badge" :class="'badge-' + entry.level">{{ getLevelLabel(entry.level) }}</span>
+          <span class="log-tag" v-if="entry.tag">{{ entry.icon || '' }} {{ entry.tag }}</span>
           <span class="log-msg">{{ entry.msg || '' }}</span>
         </div>
       </div>
@@ -27,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { io } from 'socket.io-client'
 import { getAccountLogs } from '../api/index.js'
 
@@ -36,19 +46,40 @@ const props = defineProps({ uin: String })
 const logs = ref([])
 const autoScroll = ref(true)
 const logContainer = ref(null)
+const tagFilter = ref('')
+const levelFilter = ref('')
 let socket = null
+
+const availableTags = computed(() => {
+  const tags = new Set()
+  for (const l of logs.value) {
+    if (l.tag) tags.add(l.tag)
+  }
+  return [...tags].sort()
+})
+
+const filteredLogs = computed(() => {
+  return logs.value.filter(l => {
+    if (tagFilter.value && l.tag !== tagFilter.value) return false
+    if (levelFilter.value && l.level !== levelFilter.value) return false
+    return true
+  })
+})
 
 function getLogClass(entry) {
   if (!entry) return ''
-  // 优先根据 level 字段判断
-  if (entry.level === 'warn') return 'log-warn'
   if (entry.level === 'error') return 'log-error'
-  // 再根据内容判断
+  if (entry.level === 'warn') return 'log-warn'
   const m = (entry.msg || '').toLowerCase()
   if (m.includes('错误') || m.includes('失败')) return 'log-error'
-  if (m.includes('警告')) return 'log-warn'
-  if (m.includes('成功') || m.includes('收获') || m.includes('偷取')) return 'log-success'
+  if (m.includes('成功') || m.includes('收获') || m.includes('偷')) return 'log-success'
   return ''
+}
+
+function getLevelLabel(level) {
+  if (level === 'error') return 'ERR'
+  if (level === 'warn') return 'WRN'
+  return 'INF'
 }
 
 function scrollToBottom() {
@@ -135,6 +166,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .section-title {
@@ -147,20 +180,21 @@ onUnmounted(() => {
 .logs-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .log-container {
-  background: var(--bg-base);
+  background: #0d1117;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 12px;
-  height: calc(100vh - 260px);
+  padding: 12px 14px;
+  height: calc(100vh - 280px);
   min-height: 300px;
   overflow-y: auto;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.7;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+  font-size: 12.5px;
+  line-height: 1.8;
 }
 
 .log-container::-webkit-scrollbar {
@@ -168,7 +202,7 @@ onUnmounted(() => {
 }
 
 .log-container::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: #30363d;
   border-radius: 3px;
 }
 
@@ -179,50 +213,89 @@ onUnmounted(() => {
 }
 
 .log-line {
-  color: var(--text-muted);
+  color: #c9d1d9;
   white-space: pre-wrap;
   word-break: break-all;
-  padding: 2px 0;
+  padding: 1px 0;
   display: flex;
+  align-items: baseline;
   gap: 6px;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.3);
+}
+
+.log-line:last-child {
+  border-bottom: none;
 }
 
 .log-time {
-  color: var(--text-faint);
+  color: #6e7681;
   flex-shrink: 0;
+  font-size: 11.5px;
+  min-width: 85px;
+}
+
+.log-level-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: center;
+  line-height: 18px;
+}
+
+.badge-info {
+  background: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+}
+
+.badge-warn {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+}
+
+.badge-error {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
 }
 
 .log-tag {
-  color: var(--accent);
+  color: #79c0ff;
   flex-shrink: 0;
+  font-weight: 600;
+  min-width: 60px;
 }
 
 .log-msg {
   color: inherit;
+  flex: 1;
 }
 
+/* 级别着色 */
 .log-error {
-  color: var(--color-danger);
+  color: #f85149;
 }
 
 .log-error .log-tag {
-  color: var(--color-danger);
+  color: #f85149;
 }
 
 .log-warn {
-  color: var(--color-warning);
+  color: #d29922;
 }
 
 .log-warn .log-tag {
-  color: var(--color-warning);
+  color: #d29922;
 }
 
 .log-success {
-  color: var(--color-success);
+  color: #3fb950;
 }
 
 .log-success .log-tag {
-  color: var(--color-success);
+  color: #3fb950;
 }
 
 @media (max-width: 768px) {
