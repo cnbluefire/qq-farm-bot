@@ -117,8 +117,8 @@ router.get('/accounts', (req, res) => {
             const allowed = (adminUser?.allowed_uins || '').split(',').map(s => s.trim()).filter(Boolean);
             accounts = accounts.map(a => {
                 const isOwn = allowed.includes(a.uin);
+                // 保留头像字段（avatar），其他敏感信息脱敏
                 if (isOwn) return { ...a, isOwn: true };
-                // 非自己的账号：QQ号和昵称脱敏
                 const maskedUin = a.uin.slice(0, 3) + '****' + a.uin.slice(-2);
                 const maskedNick = a.nickname ? a.nickname.charAt(0) + '***' : '';
                 return {
@@ -126,6 +126,7 @@ router.get('/accounts', (req, res) => {
                     uin: maskedUin,
                     nickname: maskedNick,
                     isOwn: false,
+                    avatar: a.avatar || '', // 保证头像字段存在
                 };
             });
             // 自己的账号排前面
