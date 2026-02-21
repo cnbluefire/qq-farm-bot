@@ -184,45 +184,6 @@ services:
 
 > 生成随机密钥：`openssl rand -hex 16`
 
-### 数据持久化
-
-数据库文件通过 volume 挂载到项目目录的 `data/` 文件夹，容器重建后数据不丢失。备份只需复制 `data/farm-bot.db`。
-
-### 常用命令
-
-```bash
-# 查看运行状态
-docker compose ps
-
-# 查看实时日志
-docker compose logs -f
-
-# 停止服务
-docker compose down
-
-# 重启
-docker compose restart
-
-# 更新代码后重新部署
-git pull && docker compose up -d --build
-```
-
-### 国内服务器镜像加速
-
-如果构建时拉取镜像超时，配置 Docker 镜像加速：
-
-```bash
-mkdir -p /etc/docker
-cat > /etc/docker/daemon.json << 'EOF'
-{
-  "registry-mirrors": [
-    "https://docker.1ms.run",
-    "https://docker.xuanyuan.me"
-  ]
-}
-EOF
-systemctl daemon-reload && systemctl restart docker
-```
 
 ---
 
