@@ -162,21 +162,19 @@
         <div class="nav-item" :class="{ active: route.name === 'Dashboard' }" @click="goMobile('/dashboard')">
           <el-icon :size="22"><HomeFilled /></el-icon><span>总览</span>
         </div>
-        <template v-if="currentUin">
-          <div class="nav-divider">当前账号</div>
-          <div class="nav-item" :class="{ active: route.name === 'AccountHome' }" @click="goMobile(`/account/${currentUin}`)">
-            <el-icon :size="22"><House /></el-icon><span>首页</span>
-          </div>
-          <div class="nav-item" :class="{ active: route.name === 'AccountLands' }" @click="goMobile(`/account/${currentUin}/lands`)">
-            <el-icon :size="22"><Grid /></el-icon><span>土地</span>
-          </div>
-          <div class="nav-item" :class="{ active: route.name === 'AccountSettings' }" @click="goMobile(`/account/${currentUin}/settings`)">
-            <el-icon :size="22"><Setting /></el-icon><span>配置</span>
-          </div>
-          <div class="nav-item" :class="{ active: route.name === 'AccountLogs' }" @click="goMobile(`/account/${currentUin}/logs`)">
-            <el-icon :size="22"><Document /></el-icon><span>日志</span>
-          </div>
-        </template>
+        <div class="nav-divider">当前账号</div>
+        <div class="nav-item" :class="{ active: route.name === 'AccountHome', disabled: !currentUin }" @click="currentUin && goMobile(`/account/${currentUin}`)">
+          <el-icon :size="22"><House /></el-icon><span>首页</span>
+        </div>
+        <div class="nav-item" :class="{ active: route.name === 'AccountLands', disabled: !currentUin }" @click="currentUin && goMobile(`/account/${currentUin}/lands`)">
+          <el-icon :size="22"><Grid /></el-icon><span>土地</span>
+        </div>
+        <div class="nav-item" :class="{ active: route.name === 'AccountSettings', disabled: !currentUin }" @click="currentUin && goMobile(`/account/${currentUin}/settings`)">
+          <el-icon :size="22"><Setting /></el-icon><span>配置</span>
+        </div>
+        <div class="nav-item" :class="{ active: route.name === 'AccountLogs', disabled: !currentUin }" @click="currentUin && goMobile(`/account/${currentUin}/logs`)">
+          <el-icon :size="22"><Document /></el-icon><span>日志</span>
+        </div>
         <template v-if="auth.isAdmin">
           <div class="nav-divider">管理</div>
           <div class="nav-item" :class="{ active: route.name === 'AdminUsers' }" @click="goMobile('/admin/users')">
