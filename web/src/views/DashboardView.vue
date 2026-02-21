@@ -41,7 +41,7 @@
     </div>
 
     <!-- 操作栏 -->
-    <div class="toolbar" v-if="auth.isAdmin">
+    <div class="toolbar">
       <el-button type="primary" :icon="Plus" @click="showQrDialog = true">添加账号</el-button>
     </div>
 
@@ -51,7 +51,9 @@
         v-for="acc in accounts"
         :key="acc.uin"
         class="account-card"
-        @click="router.push(`/account/${acc.uin}`)"
+        :class="{ 'not-own': !acc.isOwn }"
+        @click="acc.isOwn && router.push(`/account/${acc.uin}`)"
+        :style="{ cursor: acc.isOwn ? 'pointer' : 'default' }"
       >
         <div class="acc-header">
           <img class="acc-avatar" :src="`https://q1.qlogo.cn/g?b=qq&nk=${acc.uin}&s=100`" :alt="acc.uin" />
@@ -71,7 +73,7 @@
           <el-tag :type="statusType(acc.status)" size="small" round effect="dark">
             {{ statusText(acc.status) }}
           </el-tag>
-          <div class="acc-actions" @click.stop>
+          <div class="acc-actions" v-if="acc.isOwn" @click.stop>
             <el-button
               v-if="acc.status !== 'running'"
               type="success" size="small" plain circle
@@ -87,7 +89,6 @@
               title="停止"
             />
             <el-button
-              v-if="auth.isAdmin"
               type="danger" size="small" plain circle
               :icon="Delete"
               @click="handleDelete(acc.uin)"
@@ -191,6 +192,10 @@ function handleQrCancel() {
 }
 
 function formatNum(n) { return n ? Number(n).toLocaleString() : '' }
+
+function isOwnAccount(uin) {
+  return auth.allowedUins.includes(uin)
+}
 
 function statusType(s) {
   return { running: 'success', error: 'danger', connecting: 'warning', 'qr-pending': 'warning' }[s] || 'info'
@@ -297,6 +302,16 @@ onUnmounted(() => {
   border-color: var(--accent);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+.account-card.not-own {
+  opacity: 0.55;
+}
+
+.account-card.not-own:hover {
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+  transform: none;
 }
 
 .acc-header {

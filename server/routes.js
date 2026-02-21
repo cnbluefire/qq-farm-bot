@@ -43,6 +43,35 @@ router.post('/auth/login', (req, res) => {
     }
 });
 
+/** POST /api/auth/register */
+router.post('/auth/register', (req, res) => {
+    try {
+        const { username, password } = req.body || {};
+        if (!username || !password) return res.status(400).json({ ok: false, error: '用户名和密码不能为空' });
+        if (username.length < 2 || username.length > 20) return res.status(400).json({ ok: false, error: '用户名长度 2-20 位' });
+        if (password.length < 4) return res.status(400).json({ ok: false, error: '密码至少4位' });
+        if (db.getAdminUser(username)) return res.status(400).json({ ok: false, error: '用户名已存在' });
+
+        db.createAdminUser({ username, passwordHash: hashPassword(password), role: 'user' });
+        const user = db.getAdminUser(username);
+        const token = signToken({
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            allowedUins: '',
+        });
+        res.json({
+            ok: true,
+            data: {
+                token,
+                user: { id: user.id, username: user.username, role: user.role, allowedUins: '' },
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
 /** POST /api/auth/change-password */
 router.post('/auth/change-password', authMiddleware, (req, res) => {
     try {
@@ -82,12 +111,18 @@ router.use(authMiddleware);
 router.get('/accounts', (req, res) => {
     try {
         let accounts = botManager.listAccounts();
-        // 普通用户只能看自己的账号
         if (req.user.role !== 'admin') {
-            const allowed = (req.user.allowedUins || '').split(',').map(s => s.trim()).filter(Boolean);
-            if (allowed.length > 0) {
-                accounts = accounts.filter(a => allowed.includes(a.uin));
-            }
+            // 普通用户能看到所有账号，但标记哪些是自己的
+            const adminUser = db.getAdminUserById(req.user.id);
+            const allowed = (adminUser?.allowed_uins || '').split(',').map(s => s.trim()).filter(Boolean);
+            accounts = accounts.map(a => ({
+                ...a,
+                isOwn: allowed.includes(a.uin),
+            }));
+            // 自己的账号排前面
+            accounts.sort((a, b) => (b.isOwn ? 1 : 0) - (a.isOwn ? 1 : 0));
+        } else {
+            accounts = accounts.map(a => ({ ...a, isOwn: true }));
         }
         res.json({ ok: true, data: accounts });
     } catch (err) {
@@ -237,14 +272,21 @@ router.get('/plant-ranking', (req, res) => {
 router.post('/accounts/:uin/qr-login', async (req, res) => {
     try {
         const { uin } = req.params;
-        if (req.user.role !== 'admin') {
-            const allowed = (req.user.allowedUins || '').split(',').map(s => s.trim()).filter(Boolean);
-            if (!allowed.includes(uin)) {
-                return res.status(403).json({ ok: false, error: '无权添加此账号' });
-            }
-        }
         const { platform, farmInterval, friendInterval } = req.body || {};
         const result = await botManager.startQrLogin(uin, { platform, farmInterval, friendInterval });
+
+        // 普通用户添加账号时，自动绑定到该用户
+        if (req.user.role !== 'admin') {
+            const adminUser = db.getAdminUserById(req.user.id);
+            if (adminUser) {
+                const currentUins = (adminUser.allowed_uins || '').split(',').map(s => s.trim()).filter(Boolean);
+                if (!currentUins.includes(uin)) {
+                    currentUins.push(uin);
+                    db.updateAdminUser(adminUser.id, { allowed_uins: currentUins.join(',') });
+                }
+            }
+        }
+
         res.json({ ok: true, data: result });
     } catch (err) {
         res.status(400).json({ ok: false, error: err.message });
@@ -299,10 +341,21 @@ router.put('/accounts/:uin/config', canAccessUin, (req, res) => {
     }
 });
 
-/** DELETE /api/accounts/:uin (管理员) */
-router.delete('/accounts/:uin', adminOnly, async (req, res) => {
+/** DELETE /api/accounts/:uin (管理员或账号拥有者) */
+router.delete('/accounts/:uin', canAccessUin, async (req, res) => {
     try {
         await botManager.removeAccount(req.params.uin);
+
+        // 如果是普通用户，从其 allowed_uins 中移除
+        if (req.user.role !== 'admin') {
+            const adminUser = db.getAdminUserById(req.user.id);
+            if (adminUser) {
+                const currentUins = (adminUser.allowed_uins || '').split(',').map(s => s.trim()).filter(Boolean);
+                const updated = currentUins.filter(u => u !== req.params.uin);
+                db.updateAdminUser(adminUser.id, { allowed_uins: updated.join(',') });
+            }
+        }
+
         // 广播更新后的账号列表给所有客户端
         const io = req.app.locals.io;
         if (io) io.emit('accounts:list', botManager.listAccounts());

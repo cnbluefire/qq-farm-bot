@@ -78,7 +78,9 @@ function adminOnly(req, res, next) {
 function canAccessUin(req, res, next) {
     const { uin } = req.params;
     if (req.user.role === 'admin') return next();
-    const allowed = (req.user.allowedUins || '').split(',').map(s => s.trim()).filter(Boolean);
+    // 从数据库获取最新的 allowed_uins（JWT 中的可能过时）
+    const adminUser = db.getAdminUserById(req.user.id);
+    const allowed = (adminUser?.allowed_uins || '').split(',').map(s => s.trim()).filter(Boolean);
     if (allowed.length > 0 && !allowed.includes(uin)) {
         return res.status(403).json({ ok: false, error: '无权访问该账号' });
     }
