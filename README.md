@@ -311,4 +311,4 @@ git push
 
 ## 许可证
 
-[MIT License](https://www.google.com/search?q=LICENSE)
+[MIT License](LICENSE)
